@@ -55,7 +55,7 @@ def _download_bytes(url: str) -> Optional[bytes]:
     if not url:
         return None
     try:
-        resp = _get_session().get(url, timeout=60)
+        resp = _get_session().get(url, timeout=120)
         resp.raise_for_status()
         return resp.content
     except Exception as e:
@@ -80,7 +80,7 @@ def generate_txt2img(
         "parameters": {"size": size, "n": 1, "seed": seed},
     }
     resp = _get_session().post(
-        url, headers=_api_headers(True), json=body, timeout=30
+        url, headers=_api_headers(True), json=body, timeout=60
     )
     data = resp.json()
     task_id = data.get("output", {}).get("task_id", "")
@@ -88,7 +88,7 @@ def generate_txt2img(
         print(f"txt2img task creation failed: {data}")
         return None
 
-    result = _poll_task(task_id, max_wait=60)
+    result = _poll_task(task_id, max_wait=90)
     results = result.get("output", {}).get("results", [])
     if results:
         return _download_bytes(results[0].get("url", ""))
@@ -115,7 +115,7 @@ def generate_t2v(
         },
     }
     resp = _get_session().post(
-        url, headers=_api_headers(True), json=body, timeout=30
+        url, headers=_api_headers(True), json=body, timeout=60
     )
     data = resp.json()
     task_id = data.get("output", {}).get("task_id", "")
@@ -157,7 +157,7 @@ def generate_i2v(
         },
     }
     resp = _get_session().post(
-        url, headers=_api_headers(True), json=body, timeout=30
+        url, headers=_api_headers(True), json=body, timeout=60
     )
     data = resp.json()
     task_id = data.get("output", {}).get("task_id", "")
