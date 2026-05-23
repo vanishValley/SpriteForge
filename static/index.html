@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2D Game Asset Generator</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: #1a1a2e; color: #e0e0e0; height: 100vh; overflow: hidden; }
+
+.app { display: grid; grid-template-columns: 300px 1fr 260px; grid-template-rows: 48px 1fr; height: 100vh; }
+.header { grid-column: 1 / -1; background: #16213e; display: flex; align-items: center; padding: 0 20px; font-size: 18px; font-weight: 600; letter-spacing: 0.5px; border-bottom: 1px solid #0f3460; }
+.header span { color: #e94560; margin-left: 8px; }
+.left-panel { background: #1a1a2e; border-right: 1px solid #0f3460; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+.center-panel { background: #16213e; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+.right-panel { background: #1a1a2e; border-left: 1px solid #0f3460; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+
+label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #888; display: block; margin-bottom: 4px; }
+label .opt { color: #555; font-weight: 400; }
+input[type="file"], input[type="text"], input[type="number"], select, textarea { width: 100%; padding: 8px 10px; background: #0f3460; border: 1px solid #1a4a7a; border-radius: 6px; color: #e0e0e0; font-size: 13px; }
+select { cursor: pointer; }
+textarea { resize: vertical; min-height: 56px; font-family: inherit; }
+input:focus, select:focus, textarea:focus { outline: none; border-color: #e94560; }
+
+.asset-type-group { display: flex; flex-wrap: wrap; gap: 4px; }
+.asset-type-btn { flex: 1; min-width: 48px; padding: 7px 4px; background: #0f3460; border: 2px solid transparent; border-radius: 6px; color: #888; font-size: 11px; cursor: pointer; text-align: center; transition: all 0.15s; }
+.asset-type-btn:hover { border-color: #1a4a7a; color: #ccc; }
+.asset-type-btn.active { border-color: #e94560; color: #fff; background: #1a1a3e; }
+
+.btn { padding: 10px 20px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+.btn-primary { background: #e94560; color: #fff; width: 100%; }
+.btn-primary:hover { background: #d63850; }
+.btn-primary:disabled { background: #444; color: #888; cursor: not-allowed; }
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+.btn-outline { background: transparent; border: 1px solid #0f3460; color: #aaa; }
+.btn-outline:hover { border-color: #e94560; color: #fff; }
+
+.checkbox-row { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.checkbox-row input[type="checkbox"] { accent-color: #e94560; }
+
+.param-row { display: flex; gap: 8px; }
+.param-row > div { flex: 1; }
+
+.hidden { display: none !important; }
+
+/* Preview */
+.preview-placeholder { color: #444; font-size: 14px; text-align: center; }
+.preview-placeholder .icon { font-size: 48px; margin-bottom: 12px; }
+#preview-image { max-width: 100%; max-height: 60vh; object-fit: contain; }
+.preview-container { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+
+/* Animation controls */
+.anim-controls { margin-top: 12px; display: flex; gap: 8px; align-items: center; background: rgba(0,0,0,0.6); padding: 8px 16px; border-radius: 20px; }
+.anim-controls button { background: none; border: none; color: #fff; cursor: pointer; font-size: 16px; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.anim-controls button:hover { background: rgba(255,255,255,0.15); }
+.anim-controls input[type="range"] { width: 80px; accent-color: #e94560; }
+.anim-controls .fps-label { font-size: 10px; color: #999; min-width: 36px; text-align: center; }
+
+/* Session assets */
+.asset-card { background: #0f3460; border-radius: 6px; padding: 10px; cursor: pointer; border: 2px solid transparent; transition: all 0.15s; font-size: 12px; }
+.asset-card:hover { border-color: #1a4a7a; }
+.asset-card.selected { border-color: #e94560; }
+.asset-card .type-badge { display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 10px; text-transform: uppercase; background: #e94560; color: #fff; margin-bottom: 4px; }
+.asset-card .cached-badge { display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 10px; background: #2ecc71; color: #000; margin-left: 4px; }
+.asset-card .desc { color: #aaa; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.status-bar { position: absolute; top: 12px; right: 16px; font-size: 12px; padding: 6px 12px; border-radius: 12px; z-index: 10; }
+.status-bar.generating { background: #f39c12; color: #000; }
+.status-bar.done { background: #2ecc71; color: #000; }
+.status-bar.error { background: #e74c3c; color: #fff; }
+
+.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #2ecc71; color: #000; padding: 10px 24px; border-radius: 20px; font-size: 13px; font-weight: 600; z-index: 1000; animation: fadeInOut 2s ease; }
+@keyframes fadeInOut { 0%,100% { opacity: 0; } 20%,80% { opacity: 1; } }
+
+.anim-mode-row { display: flex; gap: 4px; }
+.anim-mode-btn { flex: 1; padding: 6px; background: #0f3460; border: 2px solid transparent; border-radius: 6px; color: #888; font-size: 11px; cursor: pointer; text-align: center; }
+.anim-mode-btn.active { border-color: #e94560; color: #fff; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">2D Game Asset Generator<span>Beta</span></div>
+
+  <div class="left-panel">
+    <div>
+      <label>Style Reference <span class="opt">(optional)</span></label>
+      <input type="file" id="style-ref-input" accept="image/*">
+    </div>
+
+    <div>
+      <label>Asset Type</label>
+      <div class="asset-type-group" id="asset-type-group">
+        <button class="asset-type-btn active" data-type="character">Character</button>
+        <button class="asset-type-btn" data-type="tilemap">Tilemap</button>
+        <button class="asset-type-btn" data-type="ui">UI</button>
+        <button class="asset-type-btn" data-type="props">Props</button>
+        <button class="asset-type-btn" data-type="vfx">VFX</button>
+      </div>
+    </div>
+
+    <div>
+      <label>Presets</label>
+      <select id="preset-select"><option value="">-- Choose preset --</option></select>
+    </div>
+
+    <div>
+      <label>Description</label>
+      <textarea id="desc-input" placeholder="Describe what you want to generate..."></textarea>
+    </div>
+
+    <div>
+      <label>Parameters</label>
+      <div class="param-row">
+        <div><label>Size</label><select id="size-input"><option value="1024*1024">1024x1024</option><option value="720*1280">720x1280</option><option value="1280*720">1280x720</option><option value="768*1152">768x1152</option></select></div>
+        <div><label>Frames</label><input type="number" id="frames-input" value="1" min="1" max="16"></div>
+      </div>
+      <div class="param-row">
+        <div><label>View</label><select id="view-input"><option value="front">Front</option><option value="side">Side</option><option value="top_down">Top-down</option></select></div>
+        <div><label>Grid Size</label><input type="number" id="grid-input" value="32" min="16" max="128" step="16"></div>
+      </div>
+    </div>
+
+    <div class="checkbox-row">
+      <input type="checkbox" id="ai-rewrite-check" checked>
+      <label for="ai-rewrite-check" style="margin:0;cursor:pointer;">AI Rewrite (DeepSeek)</label>
+    </div>
+
+    <button class="btn btn-primary" id="generate-btn">Generate</button>
+  </div>
+
+  <div class="center-panel" id="center-panel">
+    <div class="preview-placeholder" id="preview-placeholder">
+      <div class="icon">[=]</div>
+      <div>Describe your asset and click Generate</div>
+    </div>
+    <div class="status-bar hidden" id="status-bar"></div>
+    <div class="preview-container hidden" id="preview-container">
+      <img id="preview-image" src="" alt="Preview">
+      <div class="anim-controls hidden" id="anim-controls">
+        <button id="anim-prev">|&lt;</button>
+        <button id="anim-play">></button>
+        <span class="fps-label" id="fps-display">12 fps</span>
+        <input type="range" id="fps-slider" min="1" max="30" value="12">
+        <button id="anim-next">>|</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="right-panel">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <label style="margin:0;">Session Assets</label>
+      <button class="btn btn-sm btn-outline hidden" id="download-all-btn">Download All</button>
+    </div>
+    <div id="asset-list" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;">
+      <div style="color:#555;font-size:12px;text-align:center;margin-top:20px;">No assets yet</div>
+    </div>
+  </div>
+</div>
+<div class="toast hidden" id="toast"></div>
+
+<script>
+let sessionId = null;
+let currentAssetType = 'character';
+let assets = [];
+let animationTimer = null;
+let animationPlaying = false;
+let animationFps = 12;
+let frameDataUrls = [];
+let currentFrameIdx = 0;
+let frameMetas = [];
+
+const API = {
+  async init() {
+    const res = await fetch('/api/session', { method: 'POST' });
+    const d = await res.json();
+    sessionId = d.session_id;
+    return sessionId;
+  },
+  async uploadStyleRef(file) {
+    const fd = new FormData();
+    fd.append('session_id', sessionId);
+    fd.append('file', file);
+    await fetch('/api/style-ref', { method: 'POST', body: fd });
+  },
+  async generate(p) {
+    const fd = new FormData();
+    fd.append('session_id', sessionId);
+    fd.append('asset_type', p.assetType);
+    fd.append('description', p.description);
+    fd.append('style_keywords', p.styleKeywords || 'pixel art, game asset');
+    fd.append('size', p.size);
+    fd.append('frames', p.frames);
+    fd.append('view', p.view);
+    fd.append('grid_size', p.gridSize);
+    fd.append('use_ai_rewrite', p.useAiRewrite);
+    fd.append('animation_mode', p.animationMode || 't2v');
+    const res = await fetch('/api/generate', { method: 'POST', body: fd });
+    return await res.json();
+  },
+  async getJob(jobId) {
+    const res = await fetch(`/api/generate/${jobId}`);
+    return await res.json();
+  },
+  async getAssets() {
+    const res = await fetch(`/api/session/assets?session_id=${sessionId}`);
+    return await res.json();
+  },
+  async getPresets() {
+    const res = await fetch('/api/presets');
+    return await res.json();
+  },
+  downloadUrl(jobId) { return `/api/download/${jobId}`; },
+  downloadAllUrl() { return `/api/session/download-all`; },
+};
+
+async function init() {
+  await API.init();
+  await loadPresets();
+  updateAnimModeVisibility();
+}
+
+async function loadPresets() {
+  const presets = await API.getPresets();
+  const sel = document.getElementById('preset-select');
+  for (const [type, items] of Object.entries(presets)) {
+    const g = document.createElement('optgroup');
+    g.label = type.charAt(0).toUpperCase() + type.slice(1);
+    for (const item of items) {
+      const o = document.createElement('option');
+      o.value = JSON.stringify({ type, ...item });
+      o.textContent = item.label;
+      g.appendChild(o);
+    }
+    sel.appendChild(g);
+  }
+}
+
+document.getElementById('asset-type-group').addEventListener('click', e => {
+  const btn = e.target.closest('.asset-type-btn');
+  if (!btn) return;
+  document.querySelectorAll('.asset-type-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentAssetType = btn.dataset.type;
+  updateAnimModeVisibility();
+  document.getElementById('preset-select').value = '';
+});
+
+document.getElementById('preset-select').addEventListener('change', e => {
+  if (!e.target.value) return;
+  const p = JSON.parse(e.target.value);
+  currentAssetType = p.type;
+  document.querySelectorAll('.asset-type-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.type === p.type)
+  );
+  document.getElementById('desc-input').value = p.description || '';
+  if (p.view) document.getElementById('view-input').value = p.view;
+  if (p.frames) document.getElementById('frames-input').value = p.frames;
+  if (p.grid_size) document.getElementById('grid-input').value = p.grid_size;
+  updateAnimModeVisibility();
+});
+
+document.getElementById('frames-input').addEventListener('change', updateAnimModeVisibility);
+
+function updateAnimModeVisibility() {
+  const frames = parseInt(document.getElementById('frames-input').value) || 1;
+  const showAnim = frames > 1 && (currentAssetType === 'character' || currentAssetType === 'vfx');
+  document.getElementById('anim-mode-row').classList.toggle('hidden', !showAnim);
+}
+
+document.getElementById('generate-btn').addEventListener('click', async () => {
+  const desc = document.getElementById('desc-input').value.trim();
+  if (!desc) { showToast('Please enter a description'); return; }
+
+  const btn = document.getElementById('generate-btn');
+  btn.disabled = true;
+  btn.textContent = 'Generating...';
+  showStatus('Generating...', 'generating');
+
+  try {
+    const frames = parseInt(document.getElementById('frames-input').value) || 1;
+    const genResp = await API.generate({
+      assetType: currentAssetType,
+      description: desc,
+      size: document.getElementById('size-input').value,
+      frames: frames,
+      view: document.getElementById('view-input').value,
+      gridSize: parseInt(document.getElementById('grid-input').value) || 32,
+      useAiRewrite: document.getElementById('ai-rewrite-check').checked,
+      animationMode: 't2v',
+    });
+
+    const jobId = genResp.job_id;
+    const poll = async () => {
+      const st = await API.getJob(jobId);
+      if (st.status === 'done') {
+        showPreview(st.image_base64, st.json_metadata);
+        showStatus('Done!', 'done');
+        btn.disabled = false;
+        btn.textContent = 'Generate';
+        await refreshAssets();
+        setTimeout(() => hideStatus(), 2000);
+      } else if (st.status === 'failed') {
+        showStatus('Failed: ' + (st.error || 'Unknown'), 'error');
+        btn.disabled = false;
+        btn.textContent = 'Generate';
+      } else {
+        setTimeout(poll, 2000);
+      }
+    };
+    setTimeout(poll, 2000);
+  } catch (err) {
+    showStatus('Error: ' + err.message, 'error');
+    btn.disabled = false;
+    btn.textContent = 'Generate';
+  }
+});
+
+document.getElementById('style-ref-input').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (file) await API.uploadStyleRef(file);
+});
+
+function showPreview(b64, metaStr) {
+  document.getElementById('preview-placeholder').classList.add('hidden');
+  document.getElementById('preview-container').classList.remove('hidden');
+  const img = document.getElementById('preview-image');
+  img.src = b64 ? 'data:image/png;base64,' + b64 : '';
+
+  stopAnimation();
+  const animCtrls = document.getElementById('anim-controls');
+  if (metaStr) {
+    try {
+      const meta = JSON.parse(metaStr);
+      frameMetas = meta.frames || [];
+      const fc = meta.meta?.frame_count || 1;
+      if (fc > 1 && frameMetas.length > 1) {
+        parseFrameDataUrls(b64, frameMetas);
+        animCtrls.classList.remove('hidden');
+      } else {
+        animCtrls.classList.add('hidden');
+      }
+    } catch (_) {
+      animCtrls.classList.add('hidden');
+    }
+  }
+}
+
+function parseFrameDataUrls(sheetB64, metas) {
+  frameDataUrls = [];
+  currentFrameIdx = 0;
+  const fullSrc = 'data:image/png;base64,' + sheetB64;
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    for (const m of metas) {
+      const r = m.rect;
+      canvas.width = r.w;
+      canvas.height = r.h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, r.x, r.y, r.w, r.h, 0, 0, r.w, r.h);
+      frameDataUrls.push(canvas.toDataURL('image/png'));
+    }
+    showFrame(0);
+  };
+  img.src = fullSrc;
+}
+
+function showFrame(idx) {
+  if (idx < 0 || idx >= frameDataUrls.length) return;
+  currentFrameIdx = idx;
+  document.getElementById('preview-image').src = frameDataUrls[idx];
+}
+
+function stopAnimation() {
+  if (animationTimer) { clearInterval(animationTimer); animationTimer = null; }
+  animationPlaying = false;
+  document.getElementById('anim-play').textContent = '>';
+}
+
+document.getElementById('anim-play').addEventListener('click', function() {
+  if (animationPlaying) {
+    stopAnimation();
+  } else {
+    this.textContent = '||';
+    animationPlaying = true;
+    animationTimer = setInterval(() => {
+      const next = (currentFrameIdx + 1) % frameDataUrls.length;
+      showFrame(next);
+    }, 1000 / animationFps);
+  }
+});
+
+document.getElementById('anim-prev').addEventListener('click', () => {
+  stopAnimation();
+  showFrame((currentFrameIdx - 1 + frameDataUrls.length) % frameDataUrls.length);
+});
+
+document.getElementById('anim-next').addEventListener('click', () => {
+  stopAnimation();
+  showFrame((currentFrameIdx + 1) % frameDataUrls.length);
+});
+
+document.getElementById('fps-slider').addEventListener('input', function() {
+  animationFps = parseInt(this.value);
+  document.getElementById('fps-display').textContent = animationFps + ' fps';
+  if (animationPlaying) {
+    clearInterval(animationTimer);
+    animationTimer = setInterval(() => {
+      showFrame((currentFrameIdx + 1) % frameDataUrls.length);
+    }, 1000 / animationFps);
+  }
+});
+
+function showStatus(msg, cls) {
+  const bar = document.getElementById('status-bar');
+  bar.textContent = msg;
+  bar.className = 'status-bar ' + cls;
+  bar.classList.remove('hidden');
+}
+function hideStatus() { document.getElementById('status-bar').classList.add('hidden'); }
+
+async function refreshAssets() {
+  const data = await API.getAssets();
+  assets = data.assets || [];
+  renderAssetList();
+  document.getElementById('download-all-btn').classList.toggle('hidden', assets.length === 0);
+}
+
+function renderAssetList() {
+  const list = document.getElementById('asset-list');
+  if (assets.length === 0) {
+    list.innerHTML = '<div style="color:#555;font-size:12px;text-align:center;margin-top:20px;">No assets yet</div>';
+    return;
+  }
+  list.innerHTML = assets.map(a =>
+    '<div class="asset-card" data-job-id="' + a.job_id + '">' +
+      '<span class="type-badge">' + a.asset_type + '</span>' +
+      (a.cached ? '<span class="cached-badge">cached</span>' : '') +
+      '<div class="desc">' + a.description + '</div>' +
+      '<div style="color:#666;margin-top:2px;">' + a.frame_count + ' frame' + (a.frame_count>1?'s':'') + '</div>' +
+      '<div style="margin-top:6px;display:flex;gap:6px;">' +
+        '<button class="btn btn-sm btn-outline preview-btn" data-job-id="' + a.job_id + '">Preview</button>' +
+        '<button class="btn btn-sm btn-outline dl-btn" data-job-id="' + a.job_id + '">Download</button>' +
+      '</div>' +
+    '</div>'
+  ).join('');
+
+  list.querySelectorAll('.dl-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      window.open(API.downloadUrl(btn.dataset.jobId), '_blank');
+    });
+  });
+  list.querySelectorAll('.preview-btn').forEach(btn => {
+    btn.addEventListener('click', async e => {
+      e.stopPropagation();
+      const st = await API.getJob(btn.dataset.jobId);
+      if (st.status === 'done' && st.image_base64) {
+        showPreview(st.image_base64, st.json_metadata);
+      }
+    });
+  });
+}
+
+document.getElementById('download-all-btn').addEventListener('click', () => {
+  const fd = new FormData();
+  fd.append('session_id', sessionId);
+  fetch(API.downloadAllUrl(), { method: 'POST', body: fd })
+    .then(r => r.blob())
+    .then(blob => {
+      const u = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = u; a.download = 'all_assets.zip'; a.click();
+      URL.revokeObjectURL(u);
+    });
+});
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.remove('hidden');
+  setTimeout(() => t.classList.add('hidden'), 2000);
+}
+
+init();
+</script>
+</body>
+</html>
