@@ -1,12 +1,21 @@
 import io
-from PIL import Image, ImageFilter
+import os
+from PIL import Image
 from rembg import remove
+
+# Path to the onnx model that rembg needs
+_u2net_home = os.path.expanduser(os.environ.get(
+    "U2NET_HOME", "~/.u2net"
+))
+_u2net_path = os.path.join(_u2net_home, "u2net.onnx")
 
 
 def remove_bg(image_bytes: bytes) -> bytes:
     """Remove background using rembg. Returns PNG bytes.
     Falls back to original image if rembg model not available.
     """
+    if not os.path.exists(_u2net_path):
+        return image_bytes
     try:
         return remove(image_bytes)
     except Exception:
