@@ -1,233 +1,478 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>2D Game Asset Generator</title>
+<title>2D 游戏素材生成器</title>
 <style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: #1a1a2e; color: #e0e0e0; height: 100vh; overflow: hidden; }
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-.app { display: grid; grid-template-columns: 300px 1fr 260px; grid-template-rows: 48px 1fr; height: 100vh; }
-.header { grid-column: 1 / -1; background: #16213e; display: flex; align-items: center; padding: 0 20px; font-size: 18px; font-weight: 600; letter-spacing: 0.5px; border-bottom: 1px solid #0f3460; }
-.header span { color: #e94560; margin-left: 8px; }
-.left-panel { background: #1a1a2e; border-right: 1px solid #0f3460; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
-.center-panel { background: #16213e; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; overflow: hidden; }
-.right-panel { background: #1a1a2e; border-left: 1px solid #0f3460; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #0d1117;
+  color: #c9d1d9;
+  height: 100vh;
+  overflow: hidden;
+}
 
-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #888; display: block; margin-bottom: 4px; }
-label .opt { color: #555; font-weight: 400; }
-input[type="file"], input[type="text"], input[type="number"], select, textarea { width: 100%; padding: 8px 10px; background: #0f3460; border: 1px solid #1a4a7a; border-radius: 6px; color: #e0e0e0; font-size: 13px; }
+/* 布局 */
+.app {
+  display: grid;
+  grid-template-columns: 320px 1fr 280px;
+  grid-template-rows: 52px 1fr;
+  height: 100vh;
+}
+
+/* 顶栏 */
+.header {
+  grid-column: 1 / -1;
+  background: linear-gradient(135deg, #161b22 0%, #0d1117 100%);
+  border-bottom: 1px solid #21262d;
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 10px;
+}
+.header .logo {
+  width: 28px; height: 28px;
+  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+  border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+}
+.header h1 {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+  color: #f0f6fc;
+}
+.header .badge {
+  font-size: 10px;
+  background: #1f2937;
+  color: #8b949e;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+/* 左侧面板 */
+.left-panel {
+  background: #0d1117;
+  border-right: 1px solid #21262d;
+  padding: 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.panel-section {
+  background: #161b22;
+  border: 1px solid #21262d;
+  border-radius: 10px;
+  padding: 14px;
+}
+.panel-section-title {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #7c3aed;
+  margin-bottom: 10px;
+}
+
+/* 表单 */
+label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #8b949e;
+  display: block;
+  margin-bottom: 5px;
+}
+label .hint { color: #484f58; font-weight: 400; }
+
+input[type="file"] {
+  width: 100%;
+  padding: 8px;
+  background: #0d1117;
+  border: 1px dashed #30363d;
+  border-radius: 8px;
+  color: #8b949e;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color .2s;
+}
+input[type="file"]:hover { border-color: #7c3aed; }
+
+input[type="text"], input[type="number"], select, textarea {
+  width: 100%;
+  padding: 9px 12px;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  color: #c9d1d9;
+  font-size: 13px;
+  font-family: inherit;
+  transition: all .2s;
+}
 select { cursor: pointer; }
-textarea { resize: vertical; min-height: 56px; font-family: inherit; }
-input:focus, select:focus, textarea:focus { outline: none; border-color: #e94560; }
+textarea { resize: vertical; min-height: 52px; }
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.15);
+}
 
-.asset-type-group { display: flex; flex-wrap: wrap; gap: 4px; }
-.asset-type-btn { flex: 1; min-width: 48px; padding: 7px 4px; background: #0f3460; border: 2px solid transparent; border-radius: 6px; color: #888; font-size: 11px; cursor: pointer; text-align: center; transition: all 0.15s; }
-.asset-type-btn:hover { border-color: #1a4a7a; color: #ccc; }
-.asset-type-btn.active { border-color: #e94560; color: #fff; background: #1a1a3e; }
+/* 素材类型选择 */
+.type-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
+.type-btn {
+  padding: 10px 6px;
+  background: #0d1117;
+  border: 1.5px solid #21262d;
+  border-radius: 8px;
+  color: #8b949e;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: center;
+  transition: all .2s;
+}
+.type-btn:hover { border-color: #30363d; color: #c9d1d9; }
+.type-btn.active {
+  border-color: #7c3aed;
+  background: rgba(124, 58, 237, 0.1);
+  color: #a855f7;
+}
 
-.btn { padding: 10px 20px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
-.btn-primary { background: #e94560; color: #fff; width: 100%; }
-.btn-primary:hover { background: #d63850; }
-.btn-primary:disabled { background: #444; color: #888; cursor: not-allowed; }
-.btn-sm { padding: 6px 12px; font-size: 12px; }
-.btn-outline { background: transparent; border: 1px solid #0f3460; color: #aaa; }
-.btn-outline:hover { border-color: #e94560; color: #fff; }
+/* 按钮 */
+.btn {
+  padding: 11px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .2s;
+  font-family: inherit;
+}
+.btn-primary {
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+  color: #fff;
+  width: 100%;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
+}
+.btn-primary:hover { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); transform: translateY(-1px); }
+.btn-primary:disabled { background: #21262d; color: #484f58; cursor: not-allowed; transform: none; box-shadow: none; }
+.btn-sm { padding: 6px 14px; font-size: 11px; border-radius: 6px; }
+.btn-outline { background: transparent; border: 1px solid #30363d; color: #8b949e; }
+.btn-outline:hover { border-color: #7c3aed; color: #c9d1d9; }
 
-.checkbox-row { display: flex; align-items: center; gap: 8px; font-size: 13px; }
-.checkbox-row input[type="checkbox"] { accent-color: #e94560; }
-
+/* 参数区 */
 .param-row { display: flex; gap: 8px; }
 .param-row > div { flex: 1; }
 
+.checkbox-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #8b949e; }
+.checkbox-row input[type="checkbox"] { accent-color: #7c3aed; }
+
+/* 中央预览区 */
+.center-panel {
+  background: #0d1117;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  /* 网格背景 */
+  background-image:
+    linear-gradient(rgba(48, 54, 61, 0.15) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(48, 54, 61, 0.15) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+.preview-empty {
+  text-align: center;
+  color: #30363d;
+}
+.preview-empty .icon {
+  width: 64px; height: 64px;
+  margin: 0 auto 16px;
+  background: #161b22;
+  border: 1px solid #21262d;
+  border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px;
+}
+.preview-empty p { font-size: 13px; color: #484f58; }
+
+#preview-image {
+  max-width: 90%;
+  max-height: 55vh;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+.preview-container {
+  width: 100%; height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+/* 动画播放器 */
+.anim-bar {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  background: rgba(22, 27, 34, 0.95);
+  border: 1px solid #21262d;
+  padding: 8px 16px;
+  border-radius: 24px;
+  backdrop-filter: blur(8px);
+}
+.anim-bar button {
+  background: none;
+  border: 1px solid #30363d;
+  color: #c9d1d9;
+  cursor: pointer;
+  font-size: 12px;
+  width: 32px; height: 32px;
+  border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+}
+.anim-bar button:hover { background: #21262d; border-color: #7c3aed; }
+.anim-bar input[type="range"] { width: 70px; accent-color: #7c3aed; }
+.anim-bar .fps { font-size: 10px; color: #484f58; width: 36px; text-align: center; }
+.anim-bar .divider { width: 1px; height: 16px; background: #21262d; }
+
+/* 右侧面板 */
+.right-panel {
+  background: #0d1117;
+  border-left: 1px solid #21262d;
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.right-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.right-header h3 { font-size: 13px; font-weight: 600; color: #f0f6fc; }
+
+/* 资产卡片 */
+.asset-card {
+  background: #161b22;
+  border: 1px solid #21262d;
+  border-radius: 10px;
+  padding: 12px;
+  transition: all .2s;
+  font-size: 12px;
+}
+.asset-card:hover { border-color: #30363d; }
+.asset-card .card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.asset-card .type-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.tag-character { background: rgba(124,58,237,0.2); color: #a855f7; }
+.tag-tilemap  { background: rgba(59,130,246,0.2); color: #60a5fa; }
+.tag-ui       { background: rgba(16,185,129,0.2); color: #34d399; }
+.tag-props    { background: rgba(245,158,11,0.2); color: #fbbf24; }
+.tag-vfx      { background: rgba(239,68,68,0.2); color: #f87171; }
+.asset-card .cache-tag {
+  font-size: 9px;
+  background: rgba(52,211,153,0.15);
+  color: #34d399;
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-weight: 500;
+}
+.asset-card .desc-text {
+  color: #8b949e;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 4px;
+}
+.asset-card .meta { color: #484f58; font-size: 10px; }
+.asset-card .card-actions { display: flex; gap: 6px; margin-top: 8px; }
+
+/* 状态条 */
+.status-toast {
+  position: absolute;
+  top: 16px; right: 16px;
+  font-size: 12px; font-weight: 500;
+  padding: 8px 16px; border-radius: 20px;
+  z-index: 20;
+  animation: slideIn .3s ease;
+}
+@keyframes slideIn { from { opacity: 0; transform: translateY(-8px); } }
+.status-toast.generating { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); }
+.status-toast.done { background: rgba(52,211,153,0.15); color: #34d399; border: 1px solid rgba(52,211,153,0.3); }
+.status-toast.error { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+
 .hidden { display: none !important; }
 
-/* Preview */
-.preview-placeholder { color: #444; font-size: 14px; text-align: center; }
-.preview-placeholder .icon { font-size: 48px; margin-bottom: 12px; }
-#preview-image { max-width: 100%; max-height: 60vh; object-fit: contain; }
-.preview-container { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+/* Toast 提示 */
+.toast-popup {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: #1f2937;
+  color: #f0f6fc;
+  padding: 10px 24px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  z-index: 100;
+  border: 1px solid #374151;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  animation: toastIn 2.5s ease forwards;
+}
+@keyframes toastIn { 0%,100% { opacity: 0; transform: translateX(-50%) translateY(8px); } 15%,85% { opacity: 1; transform: translateX(-50%) translateY(0); } }
 
-/* Animation controls */
-.anim-controls { margin-top: 12px; display: flex; gap: 8px; align-items: center; background: rgba(0,0,0,0.6); padding: 8px 16px; border-radius: 20px; }
-.anim-controls button { background: none; border: none; color: #fff; cursor: pointer; font-size: 16px; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
-.anim-controls button:hover { background: rgba(255,255,255,0.15); }
-.anim-controls input[type="range"] { width: 80px; accent-color: #e94560; }
-.anim-controls .fps-label { font-size: 10px; color: #999; min-width: 36px; text-align: center; }
-
-/* Session assets */
-.asset-card { background: #0f3460; border-radius: 6px; padding: 10px; cursor: pointer; border: 2px solid transparent; transition: all 0.15s; font-size: 12px; }
-.asset-card:hover { border-color: #1a4a7a; }
-.asset-card.selected { border-color: #e94560; }
-.asset-card .type-badge { display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 10px; text-transform: uppercase; background: #e94560; color: #fff; margin-bottom: 4px; }
-.asset-card .cached-badge { display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 10px; background: #2ecc71; color: #000; margin-left: 4px; }
-.asset-card .desc { color: #aaa; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-.status-bar { position: absolute; top: 12px; right: 16px; font-size: 12px; padding: 6px 12px; border-radius: 12px; z-index: 10; }
-.status-bar.generating { background: #f39c12; color: #000; }
-.status-bar.done { background: #2ecc71; color: #000; }
-.status-bar.error { background: #e74c3c; color: #fff; }
-
-.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #2ecc71; color: #000; padding: 10px 24px; border-radius: 20px; font-size: 13px; font-weight: 600; z-index: 1000; animation: fadeInOut 2s ease; }
-@keyframes fadeInOut { 0%,100% { opacity: 0; } 20%,80% { opacity: 1; } }
-
-.anim-mode-row { display: flex; gap: 4px; }
-.anim-mode-btn { flex: 1; padding: 6px; background: #0f3460; border: 2px solid transparent; border-radius: 6px; color: #888; font-size: 11px; cursor: pointer; text-align: center; }
-.anim-mode-btn.active { border-color: #e94560; color: #fff; }
+.empty-state { color: #30363d; font-size: 12px; text-align: center; margin-top: 30px; }
 </style>
 </head>
 <body>
 <div class="app">
-  <div class="header">2D Game Asset Generator<span>Beta</span></div>
+  <!-- 顶栏 -->
+  <div class="header">
+    <div class="logo">&#9654;</div>
+    <h1>2D 游戏素材生成器</h1>
+    <span class="badge">Beta</span>
+  </div>
 
+  <!-- 左侧输入面板 -->
   <div class="left-panel">
-    <div>
-      <label>Style Reference <span class="opt">(optional)</span></label>
+    <div class="panel-section">
+      <div class="panel-section-title">风格参考</div>
+      <label>上传参考图 <span class="hint">(可选)</span></label>
       <input type="file" id="style-ref-input" accept="image/*">
     </div>
 
-    <div>
-      <label>Asset Type</label>
-      <div class="asset-type-group" id="asset-type-group">
-        <button class="asset-type-btn active" data-type="character">Character</button>
-        <button class="asset-type-btn" data-type="tilemap">Tilemap</button>
-        <button class="asset-type-btn" data-type="ui">UI</button>
-        <button class="asset-type-btn" data-type="props">Props</button>
-        <button class="asset-type-btn" data-type="vfx">VFX</button>
+    <div class="panel-section">
+      <div class="panel-section-title">素材类型</div>
+      <div class="type-grid" id="type-grid">
+        <button class="type-btn active" data-type="character">角色</button>
+        <button class="type-btn" data-type="tilemap">场景</button>
+        <button class="type-btn" data-type="ui">UI</button>
+        <button class="type-btn" data-type="props">道具</button>
+        <button class="type-btn" data-type="vfx">特效</button>
       </div>
     </div>
 
-    <div>
-      <label>Presets</label>
-      <select id="preset-select"><option value="">-- Choose preset --</option></select>
+    <div class="panel-section">
+      <div class="panel-section-title">快速开始</div>
+      <label>预设模板</label>
+      <select id="preset-select"><option value="">-- 选择一个预设 --</option></select>
     </div>
 
-    <div>
-      <label>Description</label>
-      <textarea id="desc-input" placeholder="Describe what you want to generate..."></textarea>
-    </div>
+    <div class="panel-section">
+      <div class="panel-section-title">描述与参数</div>
+      <label>描述你的需求</label>
+      <textarea id="desc-input" placeholder="例如：一把散发蓝光的骑士长剑，像素风格..."></textarea>
 
-    <div>
-      <label>Parameters</label>
+      <div class="param-row" style="margin-top:10px;">
+        <div><label>尺寸</label><select id="size-input"><option value="1024*1024">1024x1024</option><option value="720*1280">720x1280</option><option value="1280*720">1280x720</option><option value="768*1152">768x1152</option></select></div>
+        <div><label>帧数</label><input type="number" id="frames-input" value="1" min="1" max="16"></div>
+      </div>
       <div class="param-row">
-        <div><label>Size</label><select id="size-input"><option value="1024*1024">1024x1024</option><option value="720*1280">720x1280</option><option value="1280*720">1280x720</option><option value="768*1152">768x1152</option></select></div>
-        <div><label>Frames</label><input type="number" id="frames-input" value="1" min="1" max="16"></div>
+        <div><label>视角</label><select id="view-input"><option value="front">正面</option><option value="side">侧面</option><option value="top_down">俯视</option></select></div>
+        <div><label>网格</label><input type="number" id="grid-input" value="32" min="16" max="128" step="16"></div>
       </div>
-      <div class="param-row">
-        <div><label>View</label><select id="view-input"><option value="front">Front</option><option value="side">Side</option><option value="top_down">Top-down</option></select></div>
-        <div><label>Grid Size</label><input type="number" id="grid-input" value="32" min="16" max="128" step="16"></div>
+
+      <div class="checkbox-row" style="margin-top:10px;">
+        <input type="checkbox" id="ai-rewrite-check" checked>
+        <label for="ai-rewrite-check" style="margin:0;cursor:pointer;">AI 智能优化提示词 (DeepSeek)</label>
       </div>
     </div>
 
-    <div class="checkbox-row">
-      <input type="checkbox" id="ai-rewrite-check" checked>
-      <label for="ai-rewrite-check" style="margin:0;cursor:pointer;">AI Rewrite (DeepSeek)</label>
-    </div>
-
-    <button class="btn btn-primary" id="generate-btn">Generate</button>
+    <button class="btn btn-primary" id="generate-btn">&#9654; 开始生成</button>
   </div>
 
-  <div class="center-panel" id="center-panel">
-    <div class="preview-placeholder" id="preview-placeholder">
-      <div class="icon">[=]</div>
-      <div>Describe your asset and click Generate</div>
+  <!-- 中央预览 -->
+  <div class="center-panel" id="center">
+    <div class="preview-empty" id="preview-empty">
+      <div class="icon">&#9678;</div>
+      <p>输入描述，点击生成按钮</p>
     </div>
-    <div class="status-bar hidden" id="status-bar"></div>
+    <div class="status-toast hidden" id="status-toast"></div>
     <div class="preview-container hidden" id="preview-container">
-      <img id="preview-image" src="" alt="Preview">
-      <div class="anim-controls hidden" id="anim-controls">
-        <button id="anim-prev">|&lt;</button>
-        <button id="anim-play">></button>
-        <span class="fps-label" id="fps-display">12 fps</span>
-        <input type="range" id="fps-slider" min="1" max="30" value="12">
-        <button id="anim-next">>|</button>
+      <img id="preview-image" src="" alt="预览">
+      <div class="anim-bar hidden" id="anim-bar">
+        <button id="anim-prev" title="上一帧">&#9664;</button>
+        <button id="anim-play" title="播放/暂停">&#9654;</button>
+        <button id="anim-next" title="下一帧">&#9654;</button>
+        <div class="divider"></div>
+        <input type="range" id="fps-slider" min="2" max="30" value="12">
+        <span class="fps" id="fps-display">12fps</span>
       </div>
     </div>
   </div>
 
+  <!-- 右侧资产列表 -->
   <div class="right-panel">
-    <div style="display:flex;justify-content:space-between;align-items:center;">
-      <label style="margin:0;">Session Assets</label>
-      <button class="btn btn-sm btn-outline hidden" id="download-all-btn">Download All</button>
+    <div class="right-header">
+      <h3>会话资产</h3>
+      <button class="btn btn-sm btn-outline hidden" id="download-all-btn">打包下载</button>
     </div>
-    <div id="asset-list" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;">
-      <div style="color:#555;font-size:12px;text-align:center;margin-top:20px;">No assets yet</div>
-    </div>
+    <div id="asset-list"><div class="empty-state">暂无资产，开始生成吧</div></div>
   </div>
 </div>
-<div class="toast hidden" id="toast"></div>
+<div class="toast-popup hidden" id="toast"></div>
 
 <script>
 let sessionId = null;
-let currentAssetType = 'character';
+let currentType = 'character';
 let assets = [];
-let animationTimer = null;
-let animationPlaying = false;
-let animationFps = 12;
-let frameDataUrls = [];
-let currentFrameIdx = 0;
-let frameMetas = [];
+let animTimer = null;
+let animPlaying = false;
+let animFps = 12;
+let frameUrls = [];
+let frameIdx = 0;
 
 const API = {
-  async init() {
-    const res = await fetch('/api/session', { method: 'POST' });
-    const d = await res.json();
-    sessionId = d.session_id;
-    return sessionId;
-  },
-  async uploadStyleRef(file) {
-    const fd = new FormData();
-    fd.append('session_id', sessionId);
-    fd.append('file', file);
-    await fetch('/api/style-ref', { method: 'POST', body: fd });
-  },
+  async init() { const r = await fetch('/api/session', {method:'POST'}); const d = await r.json(); sessionId = d.session_id; },
+  async uploadStyleRef(file) { const fd = new FormData(); fd.append('session_id',sessionId); fd.append('file',file); await fetch('/api/style-ref',{method:'POST',body:fd}); },
   async generate(p) {
     const fd = new FormData();
-    fd.append('session_id', sessionId);
-    fd.append('asset_type', p.assetType);
-    fd.append('description', p.description);
-    fd.append('style_keywords', p.styleKeywords || 'pixel art, game asset');
-    fd.append('size', p.size);
-    fd.append('frames', p.frames);
-    fd.append('view', p.view);
-    fd.append('grid_size', p.gridSize);
-    fd.append('use_ai_rewrite', p.useAiRewrite);
-    fd.append('animation_mode', p.animationMode || 't2v');
-    const res = await fetch('/api/generate', { method: 'POST', body: fd });
-    return await res.json();
+    for (const [k,v] of Object.entries({session_id:sessionId,asset_type:p.type,description:p.desc,style_keywords:'pixel art, game asset',size:p.size,frames:p.frames,view:p.view,grid_size:p.grid,use_ai_rewrite:p.rewrite,animation_mode:'t2v'}))
+      fd.append(k, String(v));
+    const r = await fetch('/api/generate',{method:'POST',body:fd}); return await r.json();
   },
-  async getJob(jobId) {
-    const res = await fetch(`/api/generate/${jobId}`);
-    return await res.json();
-  },
-  async getAssets() {
-    const res = await fetch(`/api/session/assets?session_id=${sessionId}`);
-    return await res.json();
-  },
-  async getPresets() {
-    const res = await fetch('/api/presets');
-    return await res.json();
-  },
-  downloadUrl(jobId) { return `/api/download/${jobId}`; },
-  downloadAllUrl() { return `/api/session/download-all`; },
+  async getJob(jid) { const r = await fetch('/api/generate/'+jid); return await r.json(); },
+  async getAssets() { const r = await fetch('/api/session/assets?session_id='+sessionId); return await r.json(); },
+  async getPresets() { const r = await fetch('/api/presets'); return await r.json(); },
 };
 
 async function init() {
   await API.init();
-  await loadPresets();
-  updateAnimModeVisibility();
-}
-
-async function loadPresets() {
   const presets = await API.getPresets();
   const sel = document.getElementById('preset-select');
+  const labels = {character:'角色', tilemap:'场景', ui:'UI', props:'道具', vfx:'特效'};
   for (const [type, items] of Object.entries(presets)) {
     const g = document.createElement('optgroup');
-    g.label = type.charAt(0).toUpperCase() + type.slice(1);
+    g.label = labels[type] || type;
     for (const item of items) {
       const o = document.createElement('option');
-      o.value = JSON.stringify({ type, ...item });
+      o.value = JSON.stringify({type, ...item});
       o.textContent = item.label;
       g.appendChild(o);
     }
@@ -235,229 +480,193 @@ async function loadPresets() {
   }
 }
 
-document.getElementById('asset-type-group').addEventListener('click', e => {
-  const btn = e.target.closest('.asset-type-btn');
+// 类型切换
+document.getElementById('type-grid').addEventListener('click', e => {
+  const btn = e.target.closest('.type-btn');
   if (!btn) return;
-  document.querySelectorAll('.asset-type-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  currentAssetType = btn.dataset.type;
-  updateAnimModeVisibility();
+  currentType = btn.dataset.type;
   document.getElementById('preset-select').value = '';
 });
 
+// 预设选择
 document.getElementById('preset-select').addEventListener('change', e => {
   if (!e.target.value) return;
   const p = JSON.parse(e.target.value);
-  currentAssetType = p.type;
-  document.querySelectorAll('.asset-type-btn').forEach(b =>
-    b.classList.toggle('active', b.dataset.type === p.type)
-  );
+  currentType = p.type;
+  document.querySelectorAll('.type-btn').forEach(b => b.classList.toggle('active', b.dataset.type === p.type));
   document.getElementById('desc-input').value = p.description || '';
   if (p.view) document.getElementById('view-input').value = p.view;
   if (p.frames) document.getElementById('frames-input').value = p.frames;
   if (p.grid_size) document.getElementById('grid-input').value = p.grid_size;
-  updateAnimModeVisibility();
 });
 
-document.getElementById('frames-input').addEventListener('change', updateAnimModeVisibility);
-
-function updateAnimModeVisibility() {
-  const frames = parseInt(document.getElementById('frames-input').value) || 1;
-  const showAnim = frames > 1 && (currentAssetType === 'character' || currentAssetType === 'vfx');
-  document.getElementById('anim-mode-row').classList.toggle('hidden', !showAnim);
-}
-
+// 生成按钮
 document.getElementById('generate-btn').addEventListener('click', async () => {
   const desc = document.getElementById('desc-input').value.trim();
-  if (!desc) { showToast('Please enter a description'); return; }
+  if (!desc) { showToast('请先输入描述'); return; }
 
   const btn = document.getElementById('generate-btn');
   btn.disabled = true;
-  btn.textContent = 'Generating...';
-  showStatus('Generating...', 'generating');
+  btn.innerHTML = '&#9693; 生成中...';
+  showStatus('正在生成...', 'generating');
 
   try {
-    const frames = parseInt(document.getElementById('frames-input').value) || 1;
     const genResp = await API.generate({
-      assetType: currentAssetType,
-      description: desc,
+      type: currentType,
+      desc: desc,
       size: document.getElementById('size-input').value,
-      frames: frames,
+      frames: parseInt(document.getElementById('frames-input').value)||1,
       view: document.getElementById('view-input').value,
-      gridSize: parseInt(document.getElementById('grid-input').value) || 32,
-      useAiRewrite: document.getElementById('ai-rewrite-check').checked,
-      animationMode: 't2v',
+      grid: parseInt(document.getElementById('grid-input').value)||32,
+      rewrite: document.getElementById('ai-rewrite-check').checked,
     });
 
-    const jobId = genResp.job_id;
+    const jid = genResp.job_id;
     const poll = async () => {
-      const st = await API.getJob(jobId);
+      const st = await API.getJob(jid);
       if (st.status === 'done') {
-        showPreview(st.image_base64, st.json_metadata);
-        showStatus('Done!', 'done');
+        showResult(st.image_base64, st.json_metadata);
+        showStatus('生成完成!', 'done');
         btn.disabled = false;
-        btn.textContent = 'Generate';
+        btn.innerHTML = '&#9654; 开始生成';
         await refreshAssets();
-        setTimeout(() => hideStatus(), 2000);
+        setTimeout(() => hideStatus(), 3000);
       } else if (st.status === 'failed') {
-        showStatus('Failed: ' + (st.error || 'Unknown'), 'error');
+        showStatus('失败: ' + (st.error||'未知错误'), 'error');
         btn.disabled = false;
-        btn.textContent = 'Generate';
+        btn.innerHTML = '&#9654; 重试';
       } else {
         setTimeout(poll, 2000);
       }
     };
     setTimeout(poll, 2000);
   } catch (err) {
-    showStatus('Error: ' + err.message, 'error');
+    showStatus('错误: ' + err.message, 'error');
     btn.disabled = false;
-    btn.textContent = 'Generate';
+    btn.innerHTML = '&#9654; 开始生成';
   }
 });
 
 document.getElementById('style-ref-input').addEventListener('change', async e => {
-  const file = e.target.files[0];
-  if (file) await API.uploadStyleRef(file);
+  if (e.target.files[0]) await API.uploadStyleRef(e.target.files[0]);
 });
 
-function showPreview(b64, metaStr) {
-  document.getElementById('preview-placeholder').classList.add('hidden');
+// 预览 & 动画
+function showResult(b64, metaStr) {
+  document.getElementById('preview-empty').classList.add('hidden');
   document.getElementById('preview-container').classList.remove('hidden');
+  stopAnim();
+
   const img = document.getElementById('preview-image');
   img.src = b64 ? 'data:image/png;base64,' + b64 : '';
 
-  stopAnimation();
-  const animCtrls = document.getElementById('anim-controls');
+  const bar = document.getElementById('anim-bar');
   if (metaStr) {
     try {
-      const meta = JSON.parse(metaStr);
-      frameMetas = meta.frames || [];
-      const fc = meta.meta?.frame_count || 1;
-      if (fc > 1 && frameMetas.length > 1) {
-        parseFrameDataUrls(b64, frameMetas);
-        animCtrls.classList.remove('hidden');
+      const m = JSON.parse(metaStr);
+      if (m.frames && m.frames.length > 1) {
+        parseFrames(b64, m.frames);
+        bar.classList.remove('hidden');
       } else {
-        animCtrls.classList.add('hidden');
+        bar.classList.add('hidden');
       }
-    } catch (_) {
-      animCtrls.classList.add('hidden');
-    }
+    } catch(_) { bar.classList.add('hidden'); }
   }
 }
 
-function parseFrameDataUrls(sheetB64, metas) {
-  frameDataUrls = [];
-  currentFrameIdx = 0;
-  const fullSrc = 'data:image/png;base64,' + sheetB64;
-  const img = new Image();
-  img.onload = () => {
-    const canvas = document.createElement('canvas');
+function parseFrames(sheetB64, metas) {
+  frameUrls = []; frameIdx = 0;
+  const src = 'data:image/png;base64,' + sheetB64;
+  const imgEl = new Image();
+  imgEl.onload = () => {
+    const cvs = document.createElement('canvas');
     for (const m of metas) {
       const r = m.rect;
-      canvas.width = r.w;
-      canvas.height = r.h;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, r.x, r.y, r.w, r.h, 0, 0, r.w, r.h);
-      frameDataUrls.push(canvas.toDataURL('image/png'));
+      cvs.width = r.w; cvs.height = r.h;
+      const ctx = cvs.getContext('2d');
+      ctx.drawImage(imgEl, r.x, r.y, r.w, r.h, 0, 0, r.w, r.h);
+      frameUrls.push(cvs.toDataURL('image/png'));
     }
     showFrame(0);
   };
-  img.src = fullSrc;
+  imgEl.src = src;
 }
 
-function showFrame(idx) {
-  if (idx < 0 || idx >= frameDataUrls.length) return;
-  currentFrameIdx = idx;
-  document.getElementById('preview-image').src = frameDataUrls[idx];
+function showFrame(i) {
+  if (i < 0 || i >= frameUrls.length) return;
+  frameIdx = i;
+  document.getElementById('preview-image').src = frameUrls[i];
 }
 
-function stopAnimation() {
-  if (animationTimer) { clearInterval(animationTimer); animationTimer = null; }
-  animationPlaying = false;
-  document.getElementById('anim-play').textContent = '>';
+function stopAnim() {
+  if (animTimer) { clearInterval(animTimer); animTimer = null; }
+  animPlaying = false;
+  document.getElementById('anim-play').innerHTML = '&#9654;';
 }
 
 document.getElementById('anim-play').addEventListener('click', function() {
-  if (animationPlaying) {
-    stopAnimation();
-  } else {
-    this.textContent = '||';
-    animationPlaying = true;
-    animationTimer = setInterval(() => {
-      const next = (currentFrameIdx + 1) % frameDataUrls.length;
-      showFrame(next);
-    }, 1000 / animationFps);
-  }
+  if (animPlaying) { stopAnim(); return; }
+  animPlaying = true;
+  this.innerHTML = '&#9646;&#9646;';
+  animTimer = setInterval(() => showFrame((frameIdx+1)%frameUrls.length), 1000/animFps);
 });
-
-document.getElementById('anim-prev').addEventListener('click', () => {
-  stopAnimation();
-  showFrame((currentFrameIdx - 1 + frameDataUrls.length) % frameDataUrls.length);
-});
-
-document.getElementById('anim-next').addEventListener('click', () => {
-  stopAnimation();
-  showFrame((currentFrameIdx + 1) % frameDataUrls.length);
-});
-
+document.getElementById('anim-prev').addEventListener('click', () => { stopAnim(); showFrame((frameIdx-1+frameUrls.length)%frameUrls.length); });
+document.getElementById('anim-next').addEventListener('click', () => { stopAnim(); showFrame((frameIdx+1)%frameUrls.length); });
 document.getElementById('fps-slider').addEventListener('input', function() {
-  animationFps = parseInt(this.value);
-  document.getElementById('fps-display').textContent = animationFps + ' fps';
-  if (animationPlaying) {
-    clearInterval(animationTimer);
-    animationTimer = setInterval(() => {
-      showFrame((currentFrameIdx + 1) % frameDataUrls.length);
-    }, 1000 / animationFps);
-  }
+  animFps = parseInt(this.value);
+  document.getElementById('fps-display').textContent = animFps+'fps';
+  if (animPlaying) { clearInterval(animTimer); animTimer = setInterval(() => showFrame((frameIdx+1)%frameUrls.length), 1000/animFps); }
 });
 
+// 状态提示
 function showStatus(msg, cls) {
-  const bar = document.getElementById('status-bar');
-  bar.textContent = msg;
-  bar.className = 'status-bar ' + cls;
-  bar.classList.remove('hidden');
+  const el = document.getElementById('status-toast');
+  el.textContent = msg;
+  el.className = 'status-toast ' + cls;
+  el.classList.remove('hidden');
 }
-function hideStatus() { document.getElementById('status-bar').classList.add('hidden'); }
+function hideStatus() { document.getElementById('status-toast').classList.add('hidden'); }
 
+// 资产列表
 async function refreshAssets() {
   const data = await API.getAssets();
   assets = data.assets || [];
-  renderAssetList();
+  renderAssets();
   document.getElementById('download-all-btn').classList.toggle('hidden', assets.length === 0);
 }
 
-function renderAssetList() {
+function renderAssets() {
   const list = document.getElementById('asset-list');
   if (assets.length === 0) {
-    list.innerHTML = '<div style="color:#555;font-size:12px;text-align:center;margin-top:20px;">No assets yet</div>';
+    list.innerHTML = '<div class="empty-state">暂无资产，开始生成吧</div>';
     return;
   }
+  const labels = {character:'角色', tilemap:'场景', ui:'UI', props:'道具', vfx:'特效'};
   list.innerHTML = assets.map(a =>
-    '<div class="asset-card" data-job-id="' + a.job_id + '">' +
-      '<span class="type-badge">' + a.asset_type + '</span>' +
-      (a.cached ? '<span class="cached-badge">cached</span>' : '') +
-      '<div class="desc">' + a.description + '</div>' +
-      '<div style="color:#666;margin-top:2px;">' + a.frame_count + ' frame' + (a.frame_count>1?'s':'') + '</div>' +
-      '<div style="margin-top:6px;display:flex;gap:6px;">' +
-        '<button class="btn btn-sm btn-outline preview-btn" data-job-id="' + a.job_id + '">Preview</button>' +
-        '<button class="btn btn-sm btn-outline dl-btn" data-job-id="' + a.job_id + '">Download</button>' +
+    '<div class="asset-card">' +
+      '<div class="card-header">' +
+        '<span class="type-tag tag-' + a.asset_type + '">' + (labels[a.asset_type]||a.asset_type) + '</span>' +
+        (a.cached ? '<span class="cache-tag">缓存</span>' : '') +
+      '</div>' +
+      '<div class="desc-text">' + a.description + '</div>' +
+      '<div class="meta">' + a.frame_count + ' 帧</div>' +
+      '<div class="card-actions">' +
+        '<button class="btn btn-sm btn-outline pv-btn" data-jid="' + a.job_id + '">预览</button>' +
+        '<button class="btn btn-sm btn-outline dl-btn" data-jid="' + a.job_id + '">下载</button>' +
       '</div>' +
     '</div>'
   ).join('');
 
   list.querySelectorAll('.dl-btn').forEach(btn => {
-    btn.addEventListener('click', e => {
-      e.stopPropagation();
-      window.open(API.downloadUrl(btn.dataset.jobId), '_blank');
-    });
+    btn.addEventListener('click', e => { e.stopPropagation(); window.open('/api/download/'+btn.dataset.jid, '_blank'); });
   });
-  list.querySelectorAll('.preview-btn').forEach(btn => {
+  list.querySelectorAll('.pv-btn').forEach(btn => {
     btn.addEventListener('click', async e => {
       e.stopPropagation();
-      const st = await API.getJob(btn.dataset.jobId);
-      if (st.status === 'done' && st.image_base64) {
-        showPreview(st.image_base64, st.json_metadata);
-      }
+      const st = await API.getJob(btn.dataset.jid);
+      if (st.status === 'done' && st.image_base64) showResult(st.image_base64, st.json_metadata);
     });
   });
 }
@@ -465,21 +674,19 @@ function renderAssetList() {
 document.getElementById('download-all-btn').addEventListener('click', () => {
   const fd = new FormData();
   fd.append('session_id', sessionId);
-  fetch(API.downloadAllUrl(), { method: 'POST', body: fd })
-    .then(r => r.blob())
-    .then(blob => {
+  fetch('/api/session/download-all', {method:'POST', body:fd})
+    .then(r => r.blob()).then(blob => {
       const u = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = u; a.download = 'all_assets.zip'; a.click();
+      a.href = u; a.download = '全部素材.zip'; a.click();
       URL.revokeObjectURL(u);
     });
 });
 
 function showToast(msg) {
   const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.remove('hidden');
-  setTimeout(() => t.classList.add('hidden'), 2000);
+  t.textContent = msg; t.classList.remove('hidden');
+  setTimeout(() => t.classList.add('hidden'), 2500);
 }
 
 init();
