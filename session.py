@@ -1,6 +1,7 @@
 import uuid
 import time
 import hashlib
+import random
 from typing import Optional
 from config import config
 
@@ -12,6 +13,8 @@ class Session:
         self.assets: list[dict] = []
         self.style_ref_bytes: Optional[bytes] = None
         self.style_keywords: str = "pixel art, game asset"
+        # Style locking: fixed seed for all generations in this session
+        self.style_seed: int = random.randint(0, 4294967290)
 
 
 class SessionManager:
@@ -77,6 +80,10 @@ class SessionManager:
     def get_style_keywords(self, session_id: str) -> str:
         session = self.get_session(session_id)
         return session.style_keywords if session else "pixel art, game asset"
+
+    def get_style_seed(self, session_id: str) -> int:
+        session = self.get_session(session_id)
+        return session.style_seed if session else 42
 
     def make_cache_key(
         self,

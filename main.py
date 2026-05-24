@@ -137,8 +137,12 @@ async def _run_generation(job_id: str):
     try:
         at = job["asset_type"]
         at_enum = PromptAssetType(at.value)
-        ref_bytes = session_manager.get_style_ref(job["session_id"])
+        sess_id = job["session_id"]
+        ref_bytes = session_manager.get_style_ref(sess_id)
         has_ref = ref_bytes is not None
+        # Style locking: use session-level seed and keywords
+        seed = session_manager.get_style_seed(sess_id)
+        keywords = session_manager.get_style_keywords(sess_id)
 
         if job["cached"]:
             data = session_manager.get_cache(job["cache_key"])
@@ -151,16 +155,16 @@ async def _run_generation(job_id: str):
             # === Video-based animation pipeline ===
             mode = job.get("animation_mode", "t2v")
             video_prompt = build_video_prompt(
-                at_enum, job["description"], job["style_keywords"], mode
+                at_enum, job["description"], keywords, mode
             )
 
             if mode == "i2v":
                 # Generate base sprite first, then animate it
                 base_prompt = build_prompt(
                     at_enum, job["description"],
-                    job["style_keywords"], job["view"], 1, has_ref
+                    keywords, job["view"], 1, has_ref
                 )
-                base_img = generate_txt2img(base_prompt, size=job["size"])
+                base_img = generate_txt2img(base_prompt, size=job["size"], seed=seed)
                 if base_img is None:
                     job["status"] = JobStatus.FAILED
                     job["error"] = "Base image generation failed"
@@ -198,9 +202,9 @@ async def _run_generation(job_id: str):
             # === Single image pipeline ===
             prompt = build_prompt(
                 at_enum, job["description"],
-                job["style_keywords"], job["view"], 1, has_ref
+                keywords, job["view"], 1, has_ref
             )
-            img_bytes = generate_txt2img(prompt, size=job["size"])
+            img_bytes = generate_txt2img(prompt, size=job["size"], seed=seed)
 
             if img_bytes is None:
                 job["status"] = JobStatus.FAILED
