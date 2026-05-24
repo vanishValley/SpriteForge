@@ -123,27 +123,6 @@ input:focus, select:focus, textarea:focus {
   box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.15);
 }
 
-/* 素材类型选择 */
-.type-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
-.type-btn {
-  padding: 10px 6px;
-  background: #0d1117;
-  border: 1.5px solid #21262d;
-  border-radius: 8px;
-  color: #8b949e;
-  font-size: 11px;
-  font-weight: 500;
-  cursor: pointer;
-  text-align: center;
-  transition: all .2s;
-}
-.type-btn:hover { border-color: #30363d; color: #c9d1d9; }
-.type-btn.active {
-  border-color: #7c3aed;
-  background: rgba(124, 58, 237, 0.1);
-  color: #a855f7;
-}
-
 /* 按钮 */
 .btn {
   padding: 11px 20px;
@@ -362,31 +341,14 @@ input:focus, select:focus, textarea:focus {
   <!-- 左侧输入面板 -->
   <div class="left-panel">
     <div class="panel-section">
-      <div class="panel-section-title">风格参考</div>
-      <label>上传参考图 <span class="hint">(可选)</span></label>
-      <input type="file" id="style-ref-input" accept="image/*">
-    </div>
-
-    <div class="panel-section">
-      <div class="panel-section-title">素材类型</div>
-      <div class="type-grid" id="type-grid">
-        <button class="type-btn active" data-type="character">角色</button>
-        <button class="type-btn" data-type="tilemap">场景</button>
-        <button class="type-btn" data-type="ui">UI</button>
-        <button class="type-btn" data-type="props">道具</button>
-        <button class="type-btn" data-type="vfx">特效</button>
-      </div>
-    </div>
-
-    <div class="panel-section">
-      <div class="panel-section-title">快速开始</div>
+      <div class="panel-section-title">选择预设或自行描述</div>
       <label>预设模板</label>
-      <select id="preset-select"><option value="">-- 选择一个预设 --</option></select>
+      <select id="preset-select"><option value="">-- 选一个预设 --</option></select>
     </div>
 
     <div class="panel-section">
       <div class="panel-section-title">描述与参数</div>
-      <label>描述你的需求</label>
+      <label>描述你想要的素材</label>
       <textarea id="desc-input" placeholder="例如：一把散发蓝光的骑士长剑，像素风格..."></textarea>
 
       <div class="param-row" style="margin-top:10px;">
@@ -395,12 +357,11 @@ input:focus, select:focus, textarea:focus {
       </div>
       <div class="param-row">
         <div><label>视角</label><select id="view-input"><option value="front">正面</option><option value="side">侧面</option><option value="top_down">俯视</option></select></div>
-        <div><label>网格</label><input type="number" id="grid-input" value="32" min="16" max="128" step="16"></div>
       </div>
 
       <div class="checkbox-row" style="margin-top:10px;">
         <input type="checkbox" id="ai-rewrite-check" checked>
-        <label for="ai-rewrite-check" style="margin:0;cursor:pointer;">AI 智能优化提示词 (DeepSeek)</label>
+        <label for="ai-rewrite-check" style="margin:0;cursor:pointer;">AI 优化提示词</label>
       </div>
     </div>
 
@@ -448,6 +409,8 @@ let animFps = 12;
 let frameUrls = [];
 let frameIdx = 0;
 
+const TYPE_LABELS = {character: '角色', tilemap: '场景', ui: 'UI', props: '道具', vfx: '特效'};
+
 const API = {
   async init() { const r = await fetch('/api/session', {method:'POST'}); const d = await r.json(); sessionId = d.session_id; },
   async uploadStyleRef(file) { const fd = new FormData(); fd.append('session_id',sessionId); fd.append('file',file); await fetch('/api/style-ref',{method:'POST',body:fd}); },
@@ -466,10 +429,9 @@ async function init() {
   await API.init();
   const presets = await API.getPresets();
   const sel = document.getElementById('preset-select');
-  const labels = {character:'角色', tilemap:'场景', ui:'UI', props:'道具', vfx:'特效'};
   for (const [type, items] of Object.entries(presets)) {
     const g = document.createElement('optgroup');
-    g.label = labels[type] || type;
+    g.label = TYPE_LABELS[type] || type;
     for (const item of items) {
       const o = document.createElement('option');
       o.value = JSON.stringify({type, ...item});
@@ -480,32 +442,20 @@ async function init() {
   }
 }
 
-// 类型切换
-document.getElementById('type-grid').addEventListener('click', e => {
-  const btn = e.target.closest('.type-btn');
-  if (!btn) return;
-  document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  currentType = btn.dataset.type;
-  document.getElementById('preset-select').value = '';
-});
-
 // 预设选择
 document.getElementById('preset-select').addEventListener('change', e => {
   if (!e.target.value) return;
   const p = JSON.parse(e.target.value);
   currentType = p.type;
-  document.querySelectorAll('.type-btn').forEach(b => b.classList.toggle('active', b.dataset.type === p.type));
   document.getElementById('desc-input').value = p.description || '';
   if (p.view) document.getElementById('view-input').value = p.view;
   if (p.frames) document.getElementById('frames-input').value = p.frames;
-  if (p.grid_size) document.getElementById('grid-input').value = p.grid_size;
 });
 
 // 生成按钮
 document.getElementById('generate-btn').addEventListener('click', async () => {
   const desc = document.getElementById('desc-input').value.trim();
-  if (!desc) { showToast('请先输入描述'); return; }
+  if (!desc) { showToast('请先输入描述或选择预设'); return; }
 
   const btn = document.getElementById('generate-btn');
   btn.disabled = true;
@@ -519,7 +469,7 @@ document.getElementById('generate-btn').addEventListener('click', async () => {
       size: document.getElementById('size-input').value,
       frames: parseInt(document.getElementById('frames-input').value)||1,
       view: document.getElementById('view-input').value,
-      grid: parseInt(document.getElementById('grid-input').value)||32,
+      grid: 32,
       rewrite: document.getElementById('ai-rewrite-check').checked,
     });
 
@@ -547,10 +497,6 @@ document.getElementById('generate-btn').addEventListener('click', async () => {
     btn.disabled = false;
     btn.innerHTML = '&#9654; 开始生成';
   }
-});
-
-document.getElementById('style-ref-input').addEventListener('change', async e => {
-  if (e.target.files[0]) await API.uploadStyleRef(e.target.files[0]);
 });
 
 // 预览 & 动画
@@ -643,11 +589,10 @@ function renderAssets() {
     list.innerHTML = '<div class="empty-state">暂无资产，开始生成吧</div>';
     return;
   }
-  const labels = {character:'角色', tilemap:'场景', ui:'UI', props:'道具', vfx:'特效'};
   list.innerHTML = assets.map(a =>
     '<div class="asset-card">' +
       '<div class="card-header">' +
-        '<span class="type-tag tag-' + a.asset_type + '">' + (labels[a.asset_type]||a.asset_type) + '</span>' +
+        '<span class="type-tag tag-' + a.asset_type + '">' + (TYPE_LABELS[a.asset_type]||a.asset_type) + '</span>' +
         (a.cached ? '<span class="cache-tag">缓存</span>' : '') +
       '</div>' +
       '<div class="desc-text">' + a.description + '</div>' +
