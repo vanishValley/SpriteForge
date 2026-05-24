@@ -226,11 +226,13 @@ async def _run_generation(job_id: str):
             }]
 
         job["result_image"] = sheet_bytes
+        is_spritesheet = len(frame_coords) > 1
         job["result_json"] = json.dumps({
             "version": "1.0",
             "meta": {
-                "type": "spritesheet" if len(frame_coords) > 1 else "single",
+                "type": "spritesheet" if is_spritesheet else "single",
                 "frame_count": len(frame_coords),
+                "fps": 12 if is_spritesheet else 0,
                 "generated_at": "",
                 "available_sizes": list(GAME_SIZES),
             },
@@ -274,7 +276,8 @@ async def download_asset(job_id: str):
     if job is None or job["status"] != JobStatus.DONE:
         raise HTTPException(404, "Asset not found or not ready")
 
-    base_name = f"{job['asset_type'].value}_{job_id}"
+    safe_desc = "".join(c for c in job.get("description", "asset")[:20] if c.isalnum() or c in " _-").strip().replace(" ", "_")
+    base_name = f"{job['asset_type'].value}_{safe_desc}_{job_id}"
     original_img = Image.open(io.BytesIO(job["result_image"]))
     files: dict[str, bytes] = {}
     # Original
@@ -311,7 +314,8 @@ async def download_all(session_id: str = Form(...)):
     for asset in assets:
         job = jobs.get(asset["job_id"])
         if job and job["status"] == JobStatus.DONE:
-            base = f"{asset['asset_type']}_{asset['job_id']}"
+            safe_desc = "".join(c for c in job.get("description", "asset")[:20] if c.isalnum() or c in " _-").strip().replace(" ", "_")
+            base = f"{asset['asset_type']}_{safe_desc}_{asset['job_id']}"
             all_files[f"{base}.png"] = job["result_image"]
             all_files[f"{base}.json"] = (
                 job.get("result_json", "{}").encode("utf-8")
