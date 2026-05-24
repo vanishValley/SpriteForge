@@ -24,7 +24,7 @@ from prompts import AssetType as PromptAssetType
 from deepseek import rewrite_prompt
 from dashscope_client import generate_txt2img, generate_t2v, generate_i2v
 from frame_extractor import extract_frames, frames_to_spritesheet, get_consistent_bbox
-from postprocess import remove_bg, crop_to_content, edge_wrap_tile
+from postprocess import remove_bg, crop_to_content, edge_wrap_tile, resize_for_game, GAME_SIZES
 from session import SessionManager
 
 session_manager = SessionManager()
@@ -232,6 +232,7 @@ async def _run_generation(job_id: str):
                 "type": "spritesheet" if len(frame_coords) > 1 else "single",
                 "frame_count": len(frame_coords),
                 "generated_at": "",
+                "available_sizes": list(GAME_SIZES),
             },
             "frames": frame_coords,
         }, indent=2)
@@ -274,10 +275,16 @@ async def download_asset(job_id: str):
         raise HTTPException(404, "Asset not found or not ready")
 
     base_name = f"{job['asset_type'].value}_{job_id}"
-    files = {
-        f"{base_name}.png": job["result_image"],
-        f"{base_name}.json": job.get("result_json", "{}").encode("utf-8"),
-    }
+    original_img = Image.open(io.BytesIO(job["result_image"]))
+    files: dict[str, bytes] = {}
+    # Original
+    files[f"{base_name}.png"] = job["result_image"]
+    files[f"{base_name}.json"] = job.get("result_json", "{}").encode("utf-8")
+    # Game-size variants
+    variants = resize_for_game(original_img)
+    for size, data in variants.items():
+        files[f"{base_name}_{size}px.png"] = data
+
     zip_data = _make_zip(files)
     return StreamingResponse(
         io.BytesIO(zip_data),
@@ -309,6 +316,10 @@ async def download_all(session_id: str = Form(...)):
             all_files[f"{base}.json"] = (
                 job.get("result_json", "{}").encode("utf-8")
             )
+            # Game-size variants
+            orig_img = Image.open(io.BytesIO(job["result_image"]))
+            for size, data in resize_for_game(orig_img).items():
+                all_files[f"{base}_{size}px.png"] = data
 
     if not all_files:
         raise HTTPException(404, "No completed assets to download")

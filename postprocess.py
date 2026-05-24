@@ -83,6 +83,25 @@ def pack_spritesheet(
     return sheet, coords
 
 
+GAME_SIZES = [16, 32, 64, 128, 256]
+
+
+def resize_for_game(image: Image.Image) -> dict[int, bytes]:
+    """Resize an image to common game sprite sizes. Returns {size: png_bytes}."""
+    result: dict[int, bytes] = {}
+    w, h = image.size
+    for size in GAME_SIZES:
+        if size <= min(w, h):
+            scale = size / max(w, h)
+            new_w = int(w * scale)
+            new_h = int(h * scale)
+            resized = image.resize((new_w, new_h), Image.LANCZOS)
+            buf = io.BytesIO()
+            resized.save(buf, format="PNG")
+            result[size] = buf.getvalue()
+    return result
+
+
 def edge_wrap_tile(image: Image.Image) -> Image.Image:
     """Apply mirror-edge wrapping to reduce visible seams when tiling.
 
