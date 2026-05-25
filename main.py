@@ -26,6 +26,7 @@ from dashscope_client import generate_txt2img, generate_t2v, generate_i2v
 from frame_extractor import extract_frames, frames_to_spritesheet, get_consistent_bbox
 from postprocess import remove_bg, crop_to_content, edge_wrap_tile, resize_for_game, GAME_SIZES
 from session import SessionManager
+from engine_export import generate_godot_tres, generate_unity_sprite_json, generate_engine_readme
 
 session_manager = SessionManager()
 jobs: dict[str, dict] = {}
@@ -292,6 +293,24 @@ async def download_asset(job_id: str):
     for size, data in variants.items():
         files[f"{base_name}_{size}px.png"] = data
 
+    # Engine-specific files
+    json_str = job.get("result_json", "{}")
+    meta = json.loads(json_str)
+    frame_coords = meta.get("frames", [])
+    fps = meta.get("meta", {}).get("fps", 12)
+
+    if len(frame_coords) > 1:
+        tres = generate_godot_tres(f"{base_name}.png", frame_coords, fps)
+        if tres:
+            files[f"{base_name}.tres"] = tres.encode("utf-8")
+        unity_json = generate_unity_sprite_json(
+            frame_coords, original_img.width, original_img.height
+        )
+        files[f"{base_name}_unity_slices.json"] = unity_json.encode("utf-8")
+
+    engine_guide = generate_engine_readme(len(frame_coords), fps)
+    files[f"{base_name}_引擎导入说明.txt"] = engine_guide.encode("utf-8")
+
     zip_data = _make_zip(files)
     return StreamingResponse(
         io.BytesIO(zip_data),
@@ -328,6 +347,21 @@ async def download_all(session_id: str = Form(...)):
             orig_img = Image.open(io.BytesIO(job["result_image"]))
             for size, data in resize_for_game(orig_img).items():
                 all_files[f"{base}_{size}px.png"] = data
+            # Engine files
+            json_str = job.get("result_json", "{}")
+            meta = json.loads(json_str)
+            frame_coords = meta.get("frames", [])
+            fps = meta.get("meta", {}).get("fps", 12)
+            if len(frame_coords) > 1:
+                tres = generate_godot_tres(f"{base}.png", frame_coords, fps)
+                if tres:
+                    all_files[f"{base}.tres"] = tres.encode("utf-8")
+                all_files[f"{base}_unity_slices.json"] = generate_unity_sprite_json(
+                    frame_coords, orig_img.width, orig_img.height
+                ).encode("utf-8")
+            all_files[f"{base}_引擎导入说明.txt"] = generate_engine_readme(
+                len(frame_coords), fps
+            ).encode("utf-8")
 
     if not all_files:
         raise HTTPException(404, "No completed assets to download")
